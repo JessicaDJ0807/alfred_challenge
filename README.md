@@ -5,6 +5,8 @@ A prototype of alfred_'s execution decision engine: given a proposed action and 
 **Live demo:** [add deployed URL here]  
 **Stack:** Vanilla HTML/JS frontend + Node/Express backend + Anthropic API (claude-sonnet-4)
 
+**Deployment note:** The backend is hosted on Render free tier, so it may spin down after inactivity. The first request can take a little longer while it wakes up.
+
 ## Run locally
 
 1. Install dependencies:
@@ -17,6 +19,8 @@ A prototype of alfred_'s execution decision engine: given a proposed action and 
    - open `alfred_decision_layer.html` in your browser
 5. In the UI, click `Decide` to send requests to:
    - `http://localhost:3001/decide`
+   - For deployed frontend, set the backend once in browser console:
+   - `localStorage.setItem('ALFRED_API_BASE_URL', 'https://<your-render-service>.onrender.com')`
 
 ---
 

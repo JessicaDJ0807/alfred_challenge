@@ -512,4 +512,5 @@ const SCENARIOS = [
 ];
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
-app.listen(3001, () => console.log('alfred_ backend running on :3001'));
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`alfred_ backend running on :${PORT}`));

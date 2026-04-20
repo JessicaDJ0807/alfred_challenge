@@ -783,7 +783,11 @@ const SCENARIOS = [
 ];
 
 let currentResult = null;
-const DECISION_ENDPOINT = 'http://localhost:3001/decide';
+const API_BASE =
+  window.ALFRED_API_BASE_URL ||
+  localStorage.getItem('ALFRED_API_BASE_URL') ||
+  (window.location.hostname === 'localhost' ? 'http://localhost:3001' : '');
+const DECISION_ENDPOINT = API_BASE ? `${API_BASE.replace(/\/$/, '')}/decide` : '/decide';
 
 function renderScenarios() {
   const list = document.getElementById('scenario-list');
