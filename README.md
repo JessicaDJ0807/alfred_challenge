@@ -2,8 +2,55 @@
 
 A prototype of alfred_'s execution decision engine: given a proposed action and conversation context, the system decides whether to execute silently, execute and notify, confirm first, ask a clarifying question, or refuse.
 
-**Live demo:** [hosted URL]  
-**Stack:** Vanilla HTML/JS frontend, Anthropic API (claude-sonnet-4)
+**Live demo:** [add deployed URL here]  
+**Stack:** Vanilla HTML/JS frontend + Node/Express backend + Anthropic API (claude-sonnet-4)
+
+## Run locally
+
+1. Install dependencies:
+   - `npm install express cors`
+2. Set your Anthropic key:
+   - add it to `.env` as `ANTHROPIC_API_KEY=your_key_here`
+3. Start backend:
+   - `node server.js`
+4. Open the UI:
+   - open `alfred_decision_layer.html` in your browser
+5. In the UI, click `Decide` to send requests to:
+   - `http://localhost:3001/decide`
+
+---
+
+## Key design decisions
+
+1. **Safety over automation rate**  
+   I optimize for avoiding irreversible mistakes, even if that means asking for extra confirmation.
+2. **Deterministic rules before model judgment**  
+   Anything auditable and predictable (risk tier, missing entities, policy checks, hesitation/conflict patterns) is computed in code first.
+3. **Conversation-first interpretation**  
+   The latest message is never treated in isolation; prior hesitation in history can override a short "yes/send it."
+4. **Single source of truth on backend**  
+   The backend owns signal computation, prompt construction, model invocation, and fallback behavior. The UI only visualizes pipeline outputs.
+5. **Failure handling as product behavior**  
+   Timeout, malformed output, and API errors are explicit product states with safe fallback messaging, not hidden system errors.
+
+### Decision contract
+
+Given `{ action, latest_message, conversation_history, user_context }`, the system always returns one of:
+- `execute_silent`
+- `execute_notify`
+- `confirm`
+- `clarify`
+- `refuse`
+
+Guarantee: on uncertainty or pipeline failure, default to a safe decision (`confirm`), never silent execution.
+
+### Policy table (deterministic overrides)
+
+| Condition | Decision | Why |
+|-----------|----------|-----|
+| Bulk destructive action (e.g., delete all emails) | `refuse` | Irreversible, policy-prohibited |
+| Missing critical entity (recipient/time/referent) | `clarify` | Avoid guessing when intent is underspecified |
+| Hesitation in history + vague confirmation now | `confirm` | Prevent unsafe recency bias after prior stop signal |
 
 ---
 
@@ -76,7 +123,7 @@ The prompt explicitly instructs the model: *never treat the latest message in is
 | Failure | Behavior |
 |---------|----------|
 | LLM timeout (>10s) | Fall back to `confirm` — never silent-execute on uncertainty |
-| Malformed model output | Retry once, then fall back to `confirm` |
+| Malformed model output | Fall back to `confirm` |
 | Missing critical context | Deterministic entity check fires `clarify` before LLM is called |
 | Policy violation | Hard `refuse` from deterministic layer — LLM never consulted |
 | Unexpected API error | Fall back to `confirm` with error surfaced in UI |
@@ -132,7 +179,6 @@ Default safe behavior: **any pipeline failure defaults to `confirm`, never `exec
 
 - Authentication / user management
 - Persistent conversation storage
-- A real backend (the prototype calls the Anthropic API directly from the browser)
 - Fine-grained entity extraction (NLP-grade)
 - A confirmation UX that's differentiated by risk level (all confirms look the same)
 - Analytics / decision logging

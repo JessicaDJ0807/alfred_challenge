@@ -783,6 +783,7 @@ const SCENARIOS = [
 ];
 
 let currentResult = null;
+const DECISION_ENDPOINT = 'http://localhost:3001/decide';
 
 function renderScenarios() {
   const list = document.getElementById('scenario-list');
@@ -994,117 +995,43 @@ async function runDecision() {
   btn.textContent = 'Deciding...';
 
   showLoading();
-
-  const startTime = Date.now();
-  const signals = computeSignals(action, latest_message, history, trust_level);
-  const prompt = buildPrompt(action, latest_message, history, signals);
-
-  const inputs = { action, latest_message, conversation_history: history, user_context: { trust_level } };
+  const input = {
+    action,
+    latest_message,
+    conversation_history: history,
+    user_context: { trust_level },
+    simulate_failure: sim_failure || null,
+  };
 
   try {
-    // Handle forced decisions
-    if (signals.forcedDecision && !sim_failure) {
-      const forcedRationales = {
-        refuse: 'This action was flagged as a policy violation by deterministic rules — bulk destructive actions are automatically refused without consulting the model.',
-        clarify: `A required entity is missing: ${signals.missingEntity.what}. Deterministic entity-resolution check caught this before the LLM was called.`,
-        confirm: 'Conversation history contains a prior hesitation followed by a vague confirmation. Deterministic conflict detection requires explicit re-confirmation before proceeding.',
-      };
-      const forcedMessages = {
-        refuse: "I'm not able to perform bulk deletions — this action is irreversible and outside what I'm authorized to do on your behalf.",
-        clarify: `Before I proceed, I need to know: what's the ${signals.missingEntity.what}?`,
-        confirm: "I noticed you said to hold off earlier — just want to confirm you're ready for me to go ahead now?",
-      };
-      renderResult({
-        decision: signals.forcedDecision,
-        rationale: forcedRationales[signals.forcedDecision],
-        suggested_message: forcedMessages[signals.forcedDecision],
-        confidence: 1.0,
-        key_signals_used: ['deterministic_override'],
-        pipeline: { inputs, signals, prompt, raw_model_output: null, forced_decision: true, latency_ms: Date.now() - startTime },
-      });
-      return;
-    }
-
-    // Simulate failure modes
-    if (sim_failure === 'timeout') {
-      await new Promise(r => setTimeout(r, 800));
-      renderResult({
-        decision: 'confirm',
-        rationale: 'LLM call timed out after 10 seconds. Defaulting to confirm to avoid unsafe silent execution.',
-        suggested_message: "I want to make sure I've got this right before acting. Could you confirm what you'd like me to do?",
-        confidence: 0.0,
-        key_signals_used: ['failure_fallback'],
-        failure: { type: 'llm_timeout', detail: 'Request timed out after 10000ms' },
-        pipeline: { inputs, signals, prompt, raw_model_output: null, forced_decision: false, latency_ms: Date.now() - startTime },
-      });
-      return;
-    }
-
-    if (sim_failure === 'malformed') {
-      const badOutput = "Sure! I think you should definitely send it. The user seems ready. Go for it! 👍";
-      renderResult({
-        decision: 'confirm',
-        rationale: 'Model returned malformed output that could not be parsed as valid JSON. Defaulting to confirm as the safe fallback.',
-        suggested_message: "Just to be safe, can you confirm what you'd like me to do here?",
-        confidence: 0.0,
-        key_signals_used: ['failure_fallback'],
-        failure: { type: 'malformed_output', detail: 'JSON parse failed — response was not valid JSON', raw: badOutput },
-        pipeline: { inputs, signals, prompt, raw_model_output: badOutput, forced_decision: false, latency_ms: Date.now() - startTime },
-      });
-      return;
-    }
-
-    // Real LLM call
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(DECISION_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }],
-      }),
+      body: JSON.stringify(input),
     });
 
-    const data = await response.json();
-    const rawText = data.content?.[0]?.text || '';
-
-    let parsed = null;
-    try {
-      const clean = rawText.replace(/```json\n?|\n?```/g, '').trim();
-      parsed = JSON.parse(clean);
-      const valid = ['execute_silent', 'execute_notify', 'confirm', 'clarify', 'refuse'];
-      if (!valid.includes(parsed.decision)) throw new Error('invalid decision');
-    } catch (e) {
-      parsed = null;
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Backend decision request failed');
     }
 
-    if (!parsed) {
-      renderResult({
-        decision: 'confirm',
-        rationale: 'Model returned malformed output. Defaulting to confirm as the safe fallback.',
-        suggested_message: "Just to be safe, can you confirm what you'd like me to do here?",
-        confidence: 0.0,
-        key_signals_used: ['failure_fallback'],
-        failure: { type: 'malformed_output', detail: 'JSON parse failed', raw: rawText },
-        pipeline: { inputs, signals, prompt, raw_model_output: rawText, forced_decision: false, latency_ms: Date.now() - startTime },
-      });
-      return;
-    }
-
-    renderResult({
-      ...parsed,
-      pipeline: { inputs, signals, prompt, raw_model_output: rawText, forced_decision: false, latency_ms: Date.now() - startTime },
-    });
-
+    renderResult(result);
   } catch (err) {
     renderResult({
       decision: 'confirm',
-      rationale: `An unexpected error occurred: ${err.message}. Defaulting to confirm.`,
+      rationale: `Backend request failed: ${err.message}. Defaulting to confirm.`,
       suggested_message: "Something went wrong on my end. Can you confirm what you'd like me to do?",
       confidence: 0.0,
       key_signals_used: ['failure_fallback'],
       failure: { type: 'unexpected_error', detail: err.message },
-      pipeline: { inputs, signals, prompt, raw_model_output: null, forced_decision: false, latency_ms: Date.now() - startTime },
+      pipeline: {
+        inputs: input,
+        signals: computeSignals(action, latest_message, history, trust_level),
+        prompt: '(not sent due to backend request failure)',
+        raw_model_output: null,
+        forced_decision: false,
+        latency_ms: 0,
+      },
     });
   } finally {
     btn.disabled = false;

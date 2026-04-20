@@ -1,8 +1,39 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
+
+function loadDotEnv() {
+  const envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) return;
+
+  const content = fs.readFileSync(envPath, 'utf8');
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+
+    const key = trimmed.slice(0, eqIdx).trim();
+    let value = trimmed.slice(eqIdx + 1).trim();
+    if (!key || process.env[key] !== undefined) continue;
+
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  }
+}
+
+loadDotEnv();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 // ─── DETERMINISTIC SIGNAL COMPUTATION ────────────────────────────────────────
 
@@ -184,13 +215,21 @@ Respond ONLY with valid JSON in this exact structure:
 // ─── ANTHROPIC API CALL ───────────────────────────────────────────────────────
 
 async function callClaude(prompt) {
+  if (!ANTHROPIC_API_KEY) {
+    return { rawText: null, error: 'missing_api_key' };
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
       signal: controller.signal,
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
@@ -238,6 +277,7 @@ function parseModelOutput(rawText) {
 app.post('/decide', async (req, res) => {
   const input = req.body;
   const startTime = Date.now();
+  const simulateFailure = input.simulate_failure;
 
   // Validate input
   if (!input.action || !input.latest_message) {
@@ -271,6 +311,46 @@ app.post('/decide', async (req, res) => {
         prompt,
         raw_model_output: null,
         forced_decision: true,
+        latency_ms: Date.now() - startTime,
+      },
+    });
+  }
+
+  // Optional failure simulation hook for demo/testing.
+  if (simulateFailure === 'timeout') {
+    return res.json({
+      decision: 'confirm',
+      rationale: 'LLM call timed out after 10 seconds. Defaulting to confirm to avoid unsafe silent execution.',
+      suggested_message: "I want to make sure I've got this right before acting. Could you confirm what you'd like me to do?",
+      confidence: 0.0,
+      key_signals_used: ['failure_fallback'],
+      failure: { type: 'llm_timeout', detail: 'Request timed out after 10000ms (simulated)' },
+      pipeline: {
+        inputs: input,
+        signals,
+        prompt,
+        raw_model_output: null,
+        forced_decision: false,
+        latency_ms: Date.now() - startTime,
+      },
+    });
+  }
+
+  if (simulateFailure === 'malformed') {
+    const badOutput = 'Sure! I think you should definitely send it. The user seems ready. Go for it!';
+    return res.json({
+      decision: 'confirm',
+      rationale: 'Model returned malformed output that could not be parsed. Defaulting to confirm as the safe fallback.',
+      suggested_message: "Just to be safe, can you confirm what you'd like me to do here?",
+      confidence: 0.0,
+      key_signals_used: ['failure_fallback'],
+      failure: { type: 'malformed_output', detail: 'JSON parse failed — response was not valid JSON (simulated)', raw: badOutput },
+      pipeline: {
+        inputs: input,
+        signals,
+        prompt,
+        raw_model_output: badOutput,
+        forced_decision: false,
         latency_ms: Date.now() - startTime,
       },
     });
