@@ -783,10 +783,7 @@ const SCENARIOS = [
 ];
 
 let currentResult = null;
-const API_BASE =
-  window.ALFRED_API_BASE_URL ||
-  localStorage.getItem('ALFRED_API_BASE_URL') ||
-  (window.location.hostname === 'localhost' ? 'http://localhost:3001' : '');
+const API_BASE = 'https://alfred-challenge-api.onrender.com';
 const DECISION_ENDPOINT = API_BASE ? `${API_BASE.replace(/\/$/, '')}/decide` : '/decide';
 
 function renderScenarios() {
