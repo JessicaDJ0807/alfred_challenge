@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>alfred_ — Execution Decision Layer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap');
+
+  :root {
+    --bg: #0e0e0f;
+    --bg2: #161617;
+    --bg3: #1c1c1e;
+    --bg4: #242426;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0efe8;
+    --text2: #9e9c94;
+    --text3: #6a6866;
+    --accent: #e8e4d0;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --teal: #2dd4bf;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --sans: 'DM Sans', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: 56px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    gap: 12px;
+  }
+
+  .logo {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+
+  .logo-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    margin-left: 4px;
+  }
+
+  .sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 10px;
+  }
+
+  .scenario-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 10px 12px;
+    cursor: pointer;
+    color: var(--text2);
+    font-family: var(--sans);
+    font-size: 13px;
+    transition: all 0.15s;
+    margin-bottom: 4px;
+  }
+
+  .scenario-btn:hover {
+    background: var(--bg3);
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  .scenario-btn.active {
+    background: var(--bg4);
+    border-color: var(--border2);
+    color: var(--text);
+  }
+
+  .scenario-btn .s-label { display: block; font-weight: 500; font-size: 12px; margin-bottom: 2px; }
+  .scenario-btn .s-desc { display: block; font-size: 11px; color: var(--text3); line-height: 1.4; }
+
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .input-panel {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+
+  .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+  }
+
+  input[type="text"], textarea, select {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+    resize: vertical;
+  }
+
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: rgba(255,255,255,0.3);
+  }
+
+  select option { background: #1c1c1e; }
+
+  .history-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: flex-start;
+  }
+
+  .history-role {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+
+  .history-role.user { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .history-role.assistant { background: rgba(74,222,128,0.12); color: var(--green); }
+
+  .history-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    outline: none;
+    resize: none;
+    min-height: 36px;
+  }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 8px 4px;
+    margin-top: 4px;
+    transition: color 0.15s;
+  }
+  .remove-btn:hover { color: var(--red); }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0e0e0f;
+  }
+  .btn-primary:hover { background: #fff; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+
+  .btn-danger-ghost {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid rgba(248,113,113,0.3);
+    font-size: 11px;
+    padding: 6px 12px;
+  }
+  .btn-danger-ghost:hover { background: rgba(248,113,113,0.08); }
+
+  .output-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text3);
+    text-align: center;
+    gap: 12px;
+  }
+
+  .empty-icon {
+    font-size: 40px;
+    opacity: 0.3;
+  }
+
+  .empty-state p {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--text3);
+  }
+
+  .decision-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .decision-header {
+    padding: 20px 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .verdict-badge {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .verdict-execute_silent { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  .verdict-execute_notify { background: rgba(45,212,191,0.12); color: var(--teal); border: 1px solid rgba(45,212,191,0.25); }
+  .verdict-confirm { background: rgba(251,191,36,0.12); color: var(--amber); border: 1px solid rgba(251,191,36,0.25); }
+  .verdict-clarify { background: rgba(96,165,250,0.12); color: var(--blue); border: 1px solid rgba(96,165,250,0.25); }
+  .verdict-refuse { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+
+  .rationale {
+    flex: 1;
+  }
+
+  .rationale-text {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.65;
+    margin-bottom: 8px;
+  }
+
+  .confidence-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .confidence-bar {
+    width: 80px;
+    height: 3px;
+    background: var(--bg4);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .confidence-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--green);
+    transition: width 0.4s ease;
+  }
+
+  .confidence-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .suggested-message {
+    padding: 16px 24px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .msg-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  .msg-bubble {
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text);
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .pipeline-section {
+    padding: 0;
+  }
+
+  .pipeline-toggle {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 14px 24px;
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.15s;
+  }
+
+  .pipeline-toggle:hover { color: var(--text2); }
+
+  .pipeline-toggle .chevron {
+    transition: transform 0.2s;
+    font-size: 10px;
+  }
+
+  .pipeline-toggle.open .chevron { transform: rotate(90deg); }
+
+  .pipeline-body {
+    display: none;
+    padding: 0 24px 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .pipeline-body.open { display: block; }
+
+  .pipeline-step {
+    margin-bottom: 20px;
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    margin-top: 16px;
+  }
+
+  .step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    flex-shrink: 0;
+  }
+
+  .step-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text2);
+  }
+
+  .step-forced {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(251,191,36,0.12);
+    color: var(--amber);
+    border: 1px solid rgba(251,191,36,0.25);
+  }
+
+  pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .signal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+  }
+
+  .signal-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .signal-key {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .signal-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .signal-val.risk-critical { color: var(--red); }
+  .signal-val.risk-high { color: var(--red); }
+  .signal-val.risk-medium { color: var(--amber); }
+  .signal-val.risk-low { color: var(--green); }
+  .signal-val.flag-true { color: var(--amber); }
+  .signal-val.flag-red { color: var(--red); }
+
+  .failure-banner {
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.25);
+    border-radius: 8px;
+    padding: 14px 18px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .failure-icon { color: var(--red); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .failure-text { font-size: 13px; line-height: 1.5; }
+  .failure-type { font-family: var(--mono); font-size: 11px; color: var(--red); margin-bottom: 4px; }
+
+  .loading-state {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text3);
+    font-size: 13px;
+    padding: 24px 0;
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .key-signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .key-signal-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--bg4);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  .latency {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    margin-left: auto;
+    align-self: center;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .add-turn-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: none;
+    border: 1px dashed var(--border2);
+    color: var(--text3);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: all 0.15s;
+  }
+  .add-turn-btn:hover { border-color: var(--border2); color: var(--text2); background: var(--bg3); }
+
+  .sim-failure-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .sim-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <header>
+    <span class="logo">alfred_</span>
+    <span class="logo-tag">execution decision layer</span>
+    <span style="margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--text3);">v0.1 — prototype</span>
+  </header>
+
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Preloaded scenarios</div>
+      <div id="scenario-list"></div>
+    </div>
+    <div class="sidebar-section" style="border-bottom: none;">
+      <div class="sidebar-label">Custom scenario</div>
+      <button class="scenario-btn" id="custom-btn" onclick="loadCustom()">
+        <span class="s-label">✏️ Start from scratch</span>
+        <span class="s-desc">Enter your own action + context</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="input-panel">
+      <div class="input-grid">
+        <div class="field-group">
+          <label>Proposed action</label>
+          <input type="text" id="action" placeholder="e.g. Send email reply to Acme Corp" />
+        </div>
+        <div class="field-group">
+          <label>Latest user message</label>
+          <input type="text" id="latest_message" placeholder="e.g. Yep, send it" />
+        </div>
+        <div class="field-group">
+          <label>User trust level</label>
+          <select id="trust_level">
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Simulate failure</label>
+          <select id="sim_failure">
+            <option value="">None</option>
+            <option value="timeout">LLM timeout</option>
+            <option value="malformed">Malformed output</option>
+          </select>
+        </div>
+        <div class="field-group full">
+          <label>Conversation history</label>
+          <div id="history-rows"></div>
+          <button class="add-turn-btn" onclick="addHistoryRow()">+ add turn</button>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="decide-btn" onclick="runDecision()">Decide →</button>
+        <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
+
+    <div class="output-panel" id="output-panel">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">◎</div>
+        <p>Select a scenario or enter an action to see alfred_'s decision</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCENARIOS = [
+  {
+    id: 'easy_reminder',
+    label: '✅ Easy — Set a reminder',
+    description: 'Clear intent, low risk, no ambiguity.',
+    input: {
+      action: 'Set a reminder to call mom at 5pm today',
+      latest_message: 'Remind me to call mom at 5pm',
+      conversation_history: [],
+      user_context: { trust_level: 'high' },
+    },
+  },
+  {
+    id: 'easy_calendar_read',
+    label: '✅ Easy — Read calendar',
+    description: 'Read-only, reversible, clear intent.',
+    input: {
+      action: "Read and summarize today's calendar events",
+      latest_message: "What's on my calendar today?",
+      conversation_history: [],
+      user_context: { trust_level: 'medium' },
+    },
+  },
+  {
+    id: 'ambiguous_legal_hold',
+    label: '🤔 Ambiguous — The "Yep, send it" trap',
+    description: 'Hesitation then vague confirmation.',
+    input: {
+      action: 'Send email reply to Acme Corp proposing 20% discount',
+      latest_message: 'Yep, send it',
+      conversation_history: [
+        { role: 'user', content: 'Draft a reply to Acme proposing a 20% discount on the annual plan' },
+        { role: 'assistant', content: "I've drafted the email. Ready to send — want me to go ahead?" },
+        { role: 'user', content: 'Actually hold off until legal reviews the pricing language' },
+        { role: 'assistant', content: "Got it, I'll wait. Let me know when legal has signed off." },
+        { role: 'user', content: 'Yep, send it' },
+      ],
+      user_context: { trust_level: 'high' },
+    },
+  },
+  {
+    id: 'ambiguous_cancel_meeting',
+    label: '🤔 Ambiguous — Cancel CEO meeting now',
+    description: 'Irreversible, time-sensitive, stressed user.',
+    input: {
+      action: 'Cancel my meeting with the CEO in 5 minutes',
+      latest_message: 'Cancel the CEO meeting',
+      conversation_history: [
+        { role: 'user', content: "I'm running really late and stressed" },
+        { role: 'assistant', content: "Sorry to hear that — do you need help rescheduling anything?" },
+      ],
+      user_context: { trust_level: 'medium' },
+    },
+  },
+  {
+    id: 'adversarial_bulk_delete',
+    label: '⚠️ Adversarial — Delete all emails',
+    description: 'Policy violation — bulk destructive action.',
+    input: {
+      action: 'Bulk delete all emails from the last year',
+      latest_message: 'Delete all my emails from last year, I want a fresh start',
+      conversation_history: [
+        { role: 'user', content: 'My inbox is a disaster' },
+        { role: 'assistant', content: 'I can help you clean it up. Want me to archive or organize by category?' },
+        { role: 'user', content: 'No just nuke everything from last year' },
+      ],
+      user_context: { trust_level: 'high' },
+    },
+  },
+  {
+    id: 'adversarial_missing_context',
+    label: '⚠️ Missing context — "Send it" with no referent',
+    description: 'Forces clarify — missing entity detection.',
+    input: {
+      action: 'Send the email',
+      latest_message: 'Send it',
+      conversation_history: [],
+      user_context: { trust_level: 'medium' },
+    },
+  },
+];
+
+let currentResult = null;
+
+function renderScenarios() {
+  const list = document.getElementById('scenario-list');
+  list.innerHTML = SCENARIOS.map(s => `
+    <button class="scenario-btn" id="sc-${s.id}" onclick="loadScenario('${s.id}')">
+      <span class="s-label">${s.label}</span>
+      <span class="s-desc">${s.description}</span>
+    </button>
+  `).join('');
+}
+
+function loadScenario(id) {
+  const s = SCENARIOS.find(s => s.id === id);
+  if (!s) return;
+
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`sc-${id}`)?.classList.add('active');
+
+  document.getElementById('action').value = s.input.action;
+  document.getElementById('latest_message').value = s.input.latest_message;
+  document.getElementById('trust_level').value = s.input.user_context?.trust_level || 'medium';
+  document.getElementById('sim_failure').value = '';
+
+  const rows = document.getElementById('history-rows');
+  rows.innerHTML = '';
+  (s.input.conversation_history || []).forEach(turn => {
+    addHistoryRow(turn.role, turn.content);
+  });
+}
+
+function loadCustom() {
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('custom-btn').classList.add('active');
+  document.getElementById('action').value = '';
+  document.getElementById('latest_message').value = '';
+  document.getElementById('trust_level').value = 'medium';
+  document.getElementById('sim_failure').value = '';
+  document.getElementById('history-rows').innerHTML = '';
+}
+
+function addHistoryRow(role = 'user', content = '') {
+  const container = document.getElementById('history-rows');
+  const id = Date.now() + Math.random();
+  const div = document.createElement('div');
+  div.className = 'history-row';
+  div.id = `row-${id}`;
+  div.innerHTML = `
+    <select style="width:90px; flex-shrink:0; margin-top:4px; font-size:11px; padding:5px 6px;" onchange="updateRoleLabel(this, ${id})">
+      <option value="user" ${role === 'user' ? 'selected' : ''}>user</option>
+      <option value="assistant" ${role === 'assistant' ? 'selected' : ''}>alfred_</option>
+    </select>
+    <textarea class="history-input" rows="1" placeholder="message content...">${content}</textarea>
+    <button class="remove-btn" onclick="document.getElementById('row-${id}').remove()">×</button>
+  `;
+  container.appendChild(div);
+  const ta = div.querySelector('textarea');
+  ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; });
+  if (content) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+}
+
+function getHistory() {
+  return Array.from(document.querySelectorAll('#history-rows .history-row')).map(row => ({
+    role: row.querySelector('select').value,
+    content: row.querySelector('textarea').value,
+  })).filter(t => t.content.trim());
+}
+
+function clearAll() {
+  document.getElementById('action').value = '';
+  document.getElementById('latest_message').value = '';
+  document.getElementById('history-rows').innerHTML = '';
+  document.getElementById('sim_failure').value = '';
+  document.getElementById('output-panel').innerHTML = `
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">◎</div>
+      <p>Select a scenario or enter an action to see alfred_'s decision</p>
+    </div>`;
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+}
+
+// ─── SIGNAL COMPUTATION (mirrors backend) ─────────────────────────────────────
+
+const ACTION_CATEGORIES = {
+  email_send:      { risk: 'high',     reversible: false },
+  email_draft:     { risk: 'low',      reversible: true  },
+  email_delete:    { risk: 'high',     reversible: false },
+  calendar_create: { risk: 'medium',   reversible: true  },
+  calendar_delete: { risk: 'high',     reversible: false },
+  calendar_read:   { risk: 'low',      reversible: true  },
+  reminder_set:    { risk: 'low',      reversible: true  },
+  reminder_delete: { risk: 'medium',   reversible: true  },
+  bulk_delete:     { risk: 'critical', reversible: false },
+  external_send:   { risk: 'high',     reversible: false },
+  unknown:         { risk: 'medium',   reversible: false },
+};
+
+function detectActionCategory(action) {
+  const a = action.toLowerCase();
+  if (a.includes('bulk') || (a.includes('delete all') && a.includes('email'))) return 'bulk_delete';
+  if (a.includes('send') && (a.includes('external') || a.includes('partner') || a.includes('client') || a.includes('corp') || a.includes('acme'))) return 'external_send';
+  if (a.includes('send') && a.includes('email')) return 'email_send';
+  if (a.includes('draft') && a.includes('email')) return 'email_draft';
+  if (a.includes('delete') && a.includes('email')) return 'email_delete';
+  if ((a.includes('delete') || a.includes('cancel')) && (a.includes('event') || a.includes('meeting') || a.includes('calendar'))) return 'calendar_delete';
+  if ((a.includes('create') || a.includes('schedule') || a.includes('add')) && (a.includes('event') || a.includes('meeting') || a.includes('calendar'))) return 'calendar_create';
+  if (a.includes('calendar') || a.includes('schedule')) return 'calendar_read';
+  if (a.includes('remind')) return 'reminder_set';
+  if (a.includes('email')) return 'email_send';
+  return 'unknown';
+}
+
+const HESITATION_PATTERNS = [/hold off/i, /wait/i, /don't send/i, /not yet/i, /pause/i, /actually/i, /cancel/i, /stop/i, /review/i, /never mind/i];
+const VAGUE_PATTERNS = [/^(it|that|this|the thing)$/i, /^send it\.?$/i, /^do it\.?$/i, /^go ahead\.?$/i];
+const CONFIRMATION_PATTERNS = [/^(yes|yep|yeah|sure|ok|okay|do it|go ahead|send it|confirmed|confirm)[.!]?$/i];
+
+function computeSignals(action, latest_message, history, trust_level) {
+  const categoryKey = detectActionCategory(action);
+  const category = ACTION_CATEGORIES[categoryKey];
+  const hesitationMessages = history.filter(m => m.role === 'user' && HESITATION_PATTERNS.some(p => p.test(m.content)));
+  const hasRecentHesitation = hesitationMessages.length > 0;
+  const latestIsVague = VAGUE_PATTERNS.some(p => p.test(latest_message?.trim()));
+  const latestIsConfirmation = CONFIRMATION_PATTERNS.some(p => p.test(latest_message?.trim()));
+  const conflictDetected = hasRecentHesitation && (latestIsVague || latestIsConfirmation);
+  const policyViolation = categoryKey === 'bulk_delete' || (trust_level === 'low' && category.risk === 'high');
+
+  let missingEntity = { missing: false, what: null };
+  const combined = action + ' ' + history.map(m => m.content).join(' ');
+  if (/send.*email/i.test(action) && !/to\s+\w+/i.test(combined) && !/@/.test(combined) && history.length < 1) {
+    missingEntity = { missing: true, what: 'recipient for the email' };
+  }
+  if (/^send (it|that)$/i.test(action.trim()) && history.length < 2) {
+    missingEntity = { missing: true, what: 'what exactly should be sent' };
+  }
+
+  let forcedDecision = null;
+  if (policyViolation) forcedDecision = 'refuse';
+  else if (missingEntity.missing) forcedDecision = 'clarify';
+  else if (conflictDetected) forcedDecision = 'confirm';
+
+  return { categoryKey, category, hasRecentHesitation, hesitationMessages: hesitationMessages.map(m => m.content), latestIsVague, latestIsConfirmation, conflictDetected, missingEntity, policyViolation, trustLevel: trust_level, forcedDecision };
+}
+
+function buildPrompt(action, latest_message, history, signals) {
+  const historyText = history.length
+    ? history.map(m => `  [${m.role.toUpperCase()}]: ${m.content}`).join('\n')
+    : '  (no prior conversation)';
+
+  const signalSummary = `- Action category: ${signals.categoryKey} (risk=${signals.category.risk}, reversible=${signals.category.reversible})
+- User trust level: ${signals.trustLevel}
+- Recent hesitation detected: ${signals.hasRecentHesitation}${signals.hesitationMessages.length ? ' → "' + signals.hesitationMessages.join('", "') + '"' : ''}
+- Latest message is vague/bare confirmation: ${signals.latestIsVague || signals.latestIsConfirmation}
+- Conflict detected (hesitation followed by vague confirm): ${signals.conflictDetected}
+- Missing entity: ${signals.missingEntity.missing ? signals.missingEntity.what : 'none'}
+- Policy violation flagged: ${signals.policyViolation}`;
+
+  return `You are alfred_'s Execution Decision Engine. Your job is to decide how alfred_ should handle a proposed action given full conversation context.
+
+DECISION OPTIONS (choose exactly one):
+1. execute_silent   — Low risk, clear intent, reversible. Act without notifying user.
+2. execute_notify   — Medium risk or notable action. Execute, then tell the user.
+3. confirm          — Intent is clear but risk is elevated or action is irreversible. Ask user to confirm first.
+4. clarify          — Intent, entity, or key parameters are unresolved. Ask a clarifying question.
+5. refuse           — Policy disallows the action, or risk/uncertainty too high.
+
+DETERMINISTIC SIGNALS (computed before you — treat as ground truth):
+${signalSummary}
+
+CONVERSATION HISTORY:
+${historyText}
+
+LATEST USER MESSAGE: "${latest_message}"
+
+PROPOSED ACTION: "${action}"
+
+DECISION RULES:
+- Never treat the latest message in isolation. The full history is your primary signal.
+- A bare "Yep" or "Send it" after a hesitation must trigger CONFIRM, not execute.
+- Missing key entities → always clarify first.
+- Irreversible + high risk + no explicit prior confirmation → confirm.
+- Bulk destructive actions → refuse regardless of instruction.
+- When in doubt, default safe: prefer confirm over execute.
+
+Respond ONLY with valid JSON (no markdown fences):
+{
+  "decision": "<execute_silent | execute_notify | confirm | clarify | refuse>",
+  "rationale": "<2-3 sentences explaining why, referencing specific signals>",
+  "suggested_message": "<message alfred_ would send to the user, or null for execute_silent>",
+  "confidence": <0.0-1.0>,
+  "key_signals_used": ["<signal1>", "<signal2>"]
+}`;
+}
+
+// ─── MAIN RUN FUNCTION ────────────────────────────────────────────────────────
+
+async function runDecision() {
+  const action = document.getElementById('action').value.trim();
+  const latest_message = document.getElementById('latest_message').value.trim();
+  const trust_level = document.getElementById('trust_level').value;
+  const sim_failure = document.getElementById('sim_failure').value;
+  const history = getHistory();
+
+  if (!action || !latest_message) {
+    alert('Please enter both a proposed action and the latest user message.');
+    return;
+  }
+
+  const btn = document.getElementById('decide-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deciding...';
+
+  showLoading();
+
+  const startTime = Date.now();
+  const signals = computeSignals(action, latest_message, history, trust_level);
+  const prompt = buildPrompt(action, latest_message, history, signals);
+
+  const inputs = { action, latest_message, conversation_history: history, user_context: { trust_level } };
+
+  try {
+    // Handle forced decisions
+    if (signals.forcedDecision && !sim_failure) {
+      const forcedRationales = {
+        refuse: 'This action was flagged as a policy violation by deterministic rules — bulk destructive actions are automatically refused without consulting the model.',
+        clarify: `A required entity is missing: ${signals.missingEntity.what}. Deterministic entity-resolution check caught this before the LLM was called.`,
+        confirm: 'Conversation history contains a prior hesitation followed by a vague confirmation. Deterministic conflict detection requires explicit re-confirmation before proceeding.',
+      };
+      const forcedMessages = {
+        refuse: "I'm not able to perform bulk deletions — this action is irreversible and outside what I'm authorized to do on your behalf.",
+        clarify: `Before I proceed, I need to know: what's the ${signals.missingEntity.what}?`,
+        confirm: "I noticed you said to hold off earlier — just want to confirm you're ready for me to go ahead now?",
+      };
+      renderResult({
+        decision: signals.forcedDecision,
+        rationale: forcedRationales[signals.forcedDecision],
+        suggested_message: forcedMessages[signals.forcedDecision],
+        confidence: 1.0,
+        key_signals_used: ['deterministic_override'],
+        pipeline: { inputs, signals, prompt, raw_model_output: null, forced_decision: true, latency_ms: Date.now() - startTime },
+      });
+      return;
+    }
+
+    // Simulate failure modes
+    if (sim_failure === 'timeout') {
+      await new Promise(r => setTimeout(r, 800));
+      renderResult({
+        decision: 'confirm',
+        rationale: 'LLM call timed out after 10 seconds. Defaulting to confirm to avoid unsafe silent execution.',
+        suggested_message: "I want to make sure I've got this right before acting. Could you confirm what you'd like me to do?",
+        confidence: 0.0,
+        key_signals_used: ['failure_fallback'],
+        failure: { type: 'llm_timeout', detail: 'Request timed out after 10000ms' },
+        pipeline: { inputs, signals, prompt, raw_model_output: null, forced_decision: false, latency_ms: Date.now() - startTime },
+      });
+      return;
+    }
+
+    if (sim_failure === 'malformed') {
+      const badOutput = "Sure! I think you should definitely send it. The user seems ready. Go for it! 👍";
+      renderResult({
+        decision: 'confirm',
+        rationale: 'Model returned malformed output that could not be parsed as valid JSON. Defaulting to confirm as the safe fallback.',
+        suggested_message: "Just to be safe, can you confirm what you'd like me to do here?",
+        confidence: 0.0,
+        key_signals_used: ['failure_fallback'],
+        failure: { type: 'malformed_output', detail: 'JSON parse failed — response was not valid JSON', raw: badOutput },
+        pipeline: { inputs, signals, prompt, raw_model_output: badOutput, forced_decision: false, latency_ms: Date.now() - startTime },
+      });
+      return;
+    }
+
+    // Real LLM call
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    const data = await response.json();
+    const rawText = data.content?.[0]?.text || '';
+
+    let parsed = null;
+    try {
+      const clean = rawText.replace(/```json\n?|\n?```/g, '').trim();
+      parsed = JSON.parse(clean);
+      const valid = ['execute_silent', 'execute_notify', 'confirm', 'clarify', 'refuse'];
+      if (!valid.includes(parsed.decision)) throw new Error('invalid decision');
+    } catch (e) {
+      parsed = null;
+    }
+
+    if (!parsed) {
+      renderResult({
+        decision: 'confirm',
+        rationale: 'Model returned malformed output. Defaulting to confirm as the safe fallback.',
+        suggested_message: "Just to be safe, can you confirm what you'd like me to do here?",
+        confidence: 0.0,
+        key_signals_used: ['failure_fallback'],
+        failure: { type: 'malformed_output', detail: 'JSON parse failed', raw: rawText },
+        pipeline: { inputs, signals, prompt, raw_model_output: rawText, forced_decision: false, latency_ms: Date.now() - startTime },
+      });
+      return;
+    }
+
+    renderResult({
+      ...parsed,
+      pipeline: { inputs, signals, prompt, raw_model_output: rawText, forced_decision: false, latency_ms: Date.now() - startTime },
+    });
+
+  } catch (err) {
+    renderResult({
+      decision: 'confirm',
+      rationale: `An unexpected error occurred: ${err.message}. Defaulting to confirm.`,
+      suggested_message: "Something went wrong on my end. Can you confirm what you'd like me to do?",
+      confidence: 0.0,
+      key_signals_used: ['failure_fallback'],
+      failure: { type: 'unexpected_error', detail: err.message },
+      pipeline: { inputs, signals, prompt, raw_model_output: null, forced_decision: false, latency_ms: Date.now() - startTime },
+    });
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Decide →';
+  }
+}
+
+function showLoading() {
+  document.getElementById('output-panel').innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Running decision pipeline…</span>
+    </div>`;
+}
+
+function renderResult(result) {
+  const p = result.pipeline;
+  const signals = p.signals;
+  const decisionLabels = {
+    execute_silent: 'Execute silently',
+    execute_notify: 'Execute + notify',
+    confirm: 'Confirm first',
+    clarify: 'Ask to clarify',
+    refuse: 'Refuse',
+  };
+
+  const confidencePct = Math.round((result.confidence || 0) * 100);
+  const confidenceColor = result.confidence > 0.7 ? 'var(--green)' : result.confidence > 0.4 ? 'var(--amber)' : 'var(--red)';
+
+  const failureBanner = result.failure ? `
+    <div class="failure-banner" style="margin: 0 24px 16px;">
+      <div class="failure-icon">⚠</div>
+      <div>
+        <div class="failure-type">${result.failure.type.toUpperCase().replace(/_/g, ' ')}</div>
+        <div class="failure-text">${result.failure.detail}</div>
+        ${result.failure.raw ? `<div style="margin-top:8px;"><pre style="max-height:80px;font-size:10px;">${escHtml(result.failure.raw)}</pre></div>` : ''}
+      </div>
+    </div>` : '';
+
+  const signalChips = Object.entries({
+    'category': signals.categoryKey,
+    'risk': signals.category.risk,
+    'reversible': String(signals.category.reversible),
+    'trust': signals.trustLevel,
+    'hesitation': signals.hasRecentHesitation ? 'YES' : 'no',
+    'conflict': signals.conflictDetected ? 'YES' : 'no',
+    'missing entity': signals.missingEntity.missing ? signals.missingEntity.what : 'none',
+    'policy violation': signals.policyViolation ? 'YES' : 'no',
+    'forced decision': p.forced_decision ? (signals.forcedDecision || 'yes') : 'no',
+  }).map(([k, v]) => {
+    let cls = '';
+    if (k === 'risk') cls = `risk-${v}`;
+    else if (['hesitation', 'conflict', 'missing entity', 'policy violation'].includes(k) && v !== 'no' && v !== 'none') cls = 'flag-true';
+    else if (k === 'policy violation' && v === 'YES') cls = 'flag-red';
+    return `<div class="signal-chip"><div class="signal-key">${k}</div><div class="signal-val ${cls}">${v}</div></div>`;
+  }).join('');
+
+  const historyText = p.inputs.conversation_history?.length
+    ? p.inputs.conversation_history.map(m => `[${m.role.toUpperCase()}] ${m.content}`).join('\n')
+    : '(none)';
+
+  document.getElementById('output-panel').innerHTML = `
+    <div class="decision-card">
+      <div class="decision-header">
+        <div class="verdict-badge verdict-${result.decision}">${decisionLabels[result.decision] || result.decision}</div>
+        <div class="rationale">
+          <div class="rationale-text">${escHtml(result.rationale)}</div>
+          <div class="confidence-row">
+            <div class="confidence-bar">
+              <div class="confidence-fill" style="width:${confidencePct}%;background:${confidenceColor};"></div>
+            </div>
+            <span class="confidence-label">confidence ${confidencePct}%</span>
+            ${result.key_signals_used?.length ? `<div class="key-signals">${result.key_signals_used.map(s => `<span class="key-signal-tag">${s}</span>`).join('')}</div>` : ''}
+            <span class="latency">${p.latency_ms}ms</span>
+          </div>
+        </div>
+      </div>
+
+      ${result.suggested_message ? `
+      <div class="suggested-message">
+        <div class="msg-label">alfred_'s response to user</div>
+        <div class="msg-bubble">"${escHtml(result.suggested_message)}"</div>
+      </div>` : ''}
+
+      ${failureBanner}
+
+      <div class="pipeline-section">
+        <button class="pipeline-toggle" id="pipeline-toggle" onclick="togglePipeline()">
+          <span class="chevron">▶</span>
+          Under the hood — full pipeline trace
+        </button>
+        <div class="pipeline-body" id="pipeline-body">
+          <div class="step-header">
+            <div class="step-num">1</div>
+            <div class="step-name">Inputs</div>
+          </div>
+          <div class="signal-grid" style="margin-bottom:8px;">
+            <div class="signal-chip"><div class="signal-key">action</div><div class="signal-val" style="font-size:11px;word-break:break-word;">${escHtml(p.inputs.action)}</div></div>
+            <div class="signal-chip"><div class="signal-key">latest message</div><div class="signal-val" style="font-size:11px;">${escHtml(p.inputs.latest_message)}</div></div>
+          </div>
+          <pre>${escHtml(historyText)}</pre>
+
+          <div class="step-header">
+            <div class="step-num">2</div>
+            <div class="step-name">Computed signals</div>
+            ${p.forced_decision ? `<span class="step-forced">forced → ${signals.forcedDecision}</span>` : ''}
+          </div>
+          <div class="signal-grid">${signalChips}</div>
+
+          <div class="step-header">
+            <div class="step-num">3</div>
+            <div class="step-name">Prompt sent to model</div>
+            ${p.forced_decision ? `<span class="step-forced">skipped — deterministic override</span>` : ''}
+          </div>
+          <pre>${p.forced_decision ? '(LLM not called — forced decision by deterministic rules)' : escHtml(p.prompt)}</pre>
+
+          <div class="step-header">
+            <div class="step-num">4</div>
+            <div class="step-name">Raw model output</div>
+          </div>
+          <pre>${p.raw_model_output ? escHtml(p.raw_model_output) : '(none)'}</pre>
+
+          <div class="step-header">
+            <div class="step-num">5</div>
+            <div class="step-name">Final parsed decision</div>
+          </div>
+          <pre>${escHtml(JSON.stringify({ decision: result.decision, rationale: result.rationale, suggested_message: result.suggested_message, confidence: result.confidence, key_signals_used: result.key_signals_used }, null, 2))}</pre>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function togglePipeline() {
+  const toggle = document.getElementById('pipeline-toggle');
+  const body = document.getElementById('pipeline-body');
+  toggle.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+renderScenarios();
+</script>
+</body>
+</html>
