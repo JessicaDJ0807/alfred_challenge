@@ -3,6 +3,7 @@
 A prototype of alfred_'s execution decision engine: given a proposed action and conversation context, the system decides whether to execute silently, execute and notify, confirm first, ask a clarifying question, or refuse.
 
 **Live demo:** https://v0-alfred-challenge-hosting.vercel.app/
+**Backend API:** https://alfred-challenge-api.onrender.com/decide
 **Stack:** Vanilla HTML/JS frontend + Node/Express backend + Anthropic API (claude-sonnet-4)
 
 **Deployment note:** The backend is hosted on Render free tier, so it may spin down after inactivity. The first request can take a little longer while it wakes up.
@@ -17,10 +18,10 @@ A prototype of alfred_'s execution decision engine: given a proposed action and 
    - `node server.js`
 4. Open the UI:
    - open `alfred_decision_layer.html` in your browser
-5. In the UI, click `Decide` to send requests to:
+5. In local development, the UI sends requests to:
    - `http://localhost:3001/decide`
-   - For deployed frontend, set the backend once in browser console:
-   - `localStorage.setItem('ALFRED_API_BASE_URL', 'https://<your-render-service>.onrender.com')`
+6. In production, the frontend is configured to call:
+   - `https://alfred-challenge-api.onrender.com/decide`
 
 ---
 
