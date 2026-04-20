@@ -2,7 +2,7 @@
 
 A prototype of alfred_'s execution decision engine: given a proposed action and conversation context, the system decides whether to execute silently, execute and notify, confirm first, ask a clarifying question, or refuse.
 
-**Live demo:** [add deployed URL here]  
+**Live demo:** https://v0-alfred-challenge-hosting.vercel.app/
 **Stack:** Vanilla HTML/JS frontend + Node/Express backend + Anthropic API (claude-sonnet-4)
 
 **Deployment note:** The backend is hosted on Render free tier, so it may spin down after inactivity. The first request can take a little longer while it wakes up.
